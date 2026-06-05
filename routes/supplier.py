@@ -19,7 +19,8 @@ def list_suppliers():
             query = query.filter(
                 db.or_(
                     Supplier.code.ilike(f'%{search}%'),
-                    Supplier.name.ilike(f'%{search}%')
+                    Supplier.name.ilike(f'%{search}%'),
+                    Supplier.country.ilike(f'%{search}%')
                 )
             )
         
@@ -62,10 +63,7 @@ def create_supplier():
             })
         except Exception as e:
             db.session.rollback()
-            return jsonify({
-                'status': 'error',
-                'message': str(e)
-            }), 400
+            return jsonify({'status': 'error', 'message': str(e)}), 400
     
     return render_template('supplier/create.html')
 
@@ -92,10 +90,7 @@ def edit_supplier(supplier_id):
             })
         except Exception as e:
             db.session.rollback()
-            return jsonify({
-                'status': 'error',
-                'message': str(e)
-            }), 400
+            return jsonify({'status': 'error', 'message': str(e)}), 400
     
     return render_template('supplier/edit.html', supplier=supplier)
 
@@ -107,38 +102,16 @@ def delete_supplier(supplier_id):
         db.session.delete(supplier)
         db.session.commit()
         
-        return jsonify({
-            'status': 'success',
-            'message': '供应商删除成功'
-        })
+        return jsonify({'status': 'success', 'message': '供应商删除成功'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 400
+        return jsonify({'status': 'error', 'message': str(e)}), 400
 
-@bp.route('/api/search')
-def search_suppliers():
-    """模糊搜索供应商"""
-    try:
-        keyword = request.args.get('keyword', '', type=str)
-        suppliers = Supplier.query.filter(
-            db.or_(
-                Supplier.code.ilike(f'%{keyword}%'),
-                Supplier.name.ilike(f'%{keyword}%')
-            )
-        ).limit(20).all()
-        
-        return jsonify({
-            'status': 'success',
-            'data': [s.to_dict() for s in suppliers]
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+@bp.route('/<int:supplier_id>')
+def view_supplier(supplier_id):
+    """查看供应商详情"""
+    supplier = Supplier.query.get_or_404(supplier_id)
+    return render_template('supplier/view.html', supplier=supplier)
 
 @bp.route('/api/all')
 def get_all_suppliers():
@@ -150,7 +123,4 @@ def get_all_suppliers():
             'data': [s.to_dict() for s in suppliers]
         })
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 500

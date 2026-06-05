@@ -2,7 +2,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from models import db, Product
 from services.auto_code_generator import CodeGenerator
-from decimal import Decimal
 from datetime import datetime
 
 bp = Blueprint('product', __name__)
@@ -50,7 +49,7 @@ def create_product():
                 name=data.get('name', '').strip(),
                 spec=data.get('spec', ''),
                 shelf_life=int(data.get('shelf_life', 0)),
-                default_price=Decimal(str(data.get('default_price', 0))),
+                default_price=data.get('default_price', 0),
                 remarks=data.get('remarks', '')
             )
             
@@ -64,10 +63,7 @@ def create_product():
             })
         except Exception as e:
             db.session.rollback()
-            return jsonify({
-                'status': 'error',
-                'message': str(e)
-            }), 400
+            return jsonify({'status': 'error', 'message': str(e)}), 400
     
     return render_template('product/create.html')
 
@@ -82,7 +78,7 @@ def edit_product(product_id):
             product.name = data.get('name', '').strip()
             product.spec = data.get('spec', '')
             product.shelf_life = int(data.get('shelf_life', 0))
-            product.default_price = Decimal(str(data.get('default_price', 0)))
+            product.default_price = data.get('default_price', 0)
             product.remarks = data.get('remarks', '')
             product.updated_at = datetime.utcnow()
             
@@ -95,10 +91,7 @@ def edit_product(product_id):
             })
         except Exception as e:
             db.session.rollback()
-            return jsonify({
-                'status': 'error',
-                'message': str(e)
-            }), 400
+            return jsonify({'status': 'error', 'message': str(e)}), 400
     
     return render_template('product/edit.html', product=product)
 
@@ -110,38 +103,16 @@ def delete_product(product_id):
         db.session.delete(product)
         db.session.commit()
         
-        return jsonify({
-            'status': 'success',
-            'message': '产品删除成功'
-        })
+        return jsonify({'status': 'success', 'message': '产品删除成功'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 400
+        return jsonify({'status': 'error', 'message': str(e)}), 400
 
-@bp.route('/api/search')
-def search_products():
-    """模糊搜索产品"""
-    try:
-        keyword = request.args.get('keyword', '', type=str)
-        products = Product.query.filter(
-            db.or_(
-                Product.code.ilike(f'%{keyword}%'),
-                Product.name.ilike(f'%{keyword}%')
-            )
-        ).limit(20).all()
-        
-        return jsonify({
-            'status': 'success',
-            'data': [p.to_dict() for p in products]
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+@bp.route('/<int:product_id>')
+def view_product(product_id):
+    """查看产品详情"""
+    product = Product.query.get_or_404(product_id)
+    return render_template('product/view.html', product=product)
 
 @bp.route('/api/all')
 def get_all_products():
@@ -153,7 +124,4 @@ def get_all_products():
             'data': [p.to_dict() for p in products]
         })
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 500
